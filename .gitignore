@@ -1,0 +1,30 @@
+# Claves y secretos — NUNCA commitear
+.env
+*.key
+secrets/
+
+# Datos: el repo lleva el código, no los datasets
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Datos de operadores: contienen direcciones de clientes
+data/operador/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Geoespacial pesado
+*.osm.pbf
+*.gpkg
+*.shp
+*.shx
+*.dbf
+
+# Sistema
+.DS_Store
