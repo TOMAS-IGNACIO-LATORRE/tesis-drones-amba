@@ -65,8 +65,9 @@ resumen = (amba.groupby('departamento')
                 .agg(cantidad=('id', 'size'),
                      sup_total_km2=('sup_km2', 'sum'),
                      sup_mediana_km2=('sup_km2', 'median'))
-                .sort_values('cantidad', ascending=False)
                 .round(3))
+# Desempate por nombre para que el CSV sea byte a byte reproducible
+resumen = resumen.sort_values(['cantidad', 'departamento'], ascending=[False, True])
 resumen.to_csv(f"{OUT}/resumen_por_partido.csv")
 
 print("Total nacional:", len(df))
