@@ -37,10 +37,18 @@ cp .env.example .env      # completar WIKIMAPIA_KEY
 
 Extrae urbanizaciones cerradas (categoría 55191) desde la API de Wikimapia,
 replicando la metodología de De Grande (2022) para obtener un corte
-actualizado. Subdivide el área de forma recursiva cuando un bounding box
-devuelve demasiados objetos, respeta el límite de 100 requests cada 5 minutos
-y recalcula la superficie proyectando cada polígono a una cónica de igual área
-centrada en su propio centroide.
+actualizado. Recorre la región por tiles XYZ (`function=box` con `x,y,z`),
+parte un tile en sus cuatro hijos cuando devuelve demasiados objetos, respeta
+el límite de 100 requests cada 5 minutos y recalcula la superficie proyectando
+cada polígono a una cónica de igual área centrada en su propio centroide.
+
+Por qué tiles y no bounding boxes (verificado en septiembre de 2026):
+`place.getbyarea` devuelve una lista vacía para cualquier consulta, y
+`function=box` con `bbox` elige internamente un único tile según el centro de
+la caja, así que pierde todo lo que queda fuera de ese tile (el bbox del delta
+de Tigre devolvía 1 objeto; por tiles devuelve 92). Por `x,y,z` la respuesta
+es exacta: cada objeto cae en un único tile y los cuatro hijos de un tile
+suman exactamente el padre.
 
 ```bash
 export WIKIMAPIA_KEY="tu-clave"
@@ -50,7 +58,23 @@ python scripts/extraer_wikimapia.py --region amba \
 ```
 
 Regiones predefinidas: `amba`, `corredor_norte`, `delta_tigre`, `argentina`.
-También acepta `--bbox lon_min,lat_min,lon_max,lat_max`.
+También acepta `--bbox lon_min,lat_min,lon_max,lat_max`. El zoom inicial de
+los tiles se calcula del tamaño del bbox (AMBA arranca en z10, 25 tiles);
+`--zoom N` lo fuerza. Los tiles del borde exceden el bbox: al final se
+descartan los objetos cuyo centro cae fuera del área pedida.
+
+La clave se puede dejar en `.env` como `WIKIMAPIA_KEY`
+(`set -a; . ./.env; set +a` antes de correr) o pasar con `--clave`.
+
+Cuota: el límite nominal es 100 requests cada 5 minutos, pero superarlo
+bloquea la clave por bastante más que eso (medido: más de 10 minutos) y cada
+request rechazado parece extender el bloqueo. El script se mantiene en 50
+por ventana, y si igual la API responde "Key limit has been reached" espera
+con backoff (5, 10, 20... minutos) sin rendirse. Cada respuesta se guarda en
+`data/raw/wikimapia_cache/<region>_<fecha>/`, así que una corrida
+interrumpida se reanuda sin volver a gastar cuota; `--cache ''` lo desactiva.
+No conviene hacer pruebas manuales contra la API con la misma clave mientras
+corre una extracción.
 
 La clave se pide en <https://wikimapia.org/api/?action=my_keys> y queda atada a
 un dominio; si figura como *not verified*, la API aplica el límite de la clave
