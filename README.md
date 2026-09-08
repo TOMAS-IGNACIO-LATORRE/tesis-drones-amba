@@ -102,7 +102,7 @@ python scripts/build_amba.py
 | Viento y precipitación horaria — NOAA ISD-Lite (Aeroparque, Ezeiza, El Palomar, San Fernando, Observatorio) | Dominio público | En mano 2020-2025 | `descargar_isd.py` | `data/raw/noaa_isd_lite/`, `data/processed/isd_horario_amba.*` |
 | Red vial y edificios — OpenStreetMap (Geofabrik, extracto 2026-09-07) | ODbL | En mano: recorte AMBA, 264.794 vías, 223.841 edificios | `osmium` (ver abajo) | `data/raw/osm/amba*.osm.pbf` |
 | Aeródromos y helipuertos — OurAirports + distancias RAAC Parte 100 (ANAC) | Dominio público / uso público | En mano: 81 sitios, 137 zonas de restricción. Faltan polígonos CTR/TMA (AIP) | `build_espacio_aereo.py` | `data/raw/espacio_aereo/`, `data/processed/espacio_aereo_amba.geojson`, `docs/regulacion/raac_parte_100.pdf` |
-| Penetración y ticket de e-commerce — CACE, Estudio Anual 2025 | Uso público con cita | En mano: cifras públicas del comunicado (el informe completo es para socios) | — | `data/raw/cace/cace_estudio_anual_2025_cifras.csv` |
+| Penetración y ticket de e-commerce — CACE, Estudio Anual 2025 | Uso público con cita | En mano: cifras públicas del comunicado (el informe completo es para socios) | — (curado a mano, sí se versiona) | `data/cace/cace_estudio_anual_2025_cifras.csv` |
 | Órdenes históricas de un operador | Privada, sujeta a NDA | En gestión | — | `data/operador/` (nunca versionado) |
 
 Todo lo que está en `data/` se regenera corriendo los scripts en este orden:
@@ -135,7 +135,8 @@ Usar esa columna, no `cod_radio`, para cruzar con el censo.
 las dos cosas para las mismas estaciones aeronáuticas, en UTC y con el viento
 en m/s. Umbral de referencia (Speedbird): 55 km/h. El servidor del SMN
 responde lento y con errores 522 intermitentes; el script reintenta y marca
-las fechas que no consiguió en `data/raw/smn/faltantes.txt`. Conviene correr
+las fechas que no consiguió en `data/raw/smn/faltantes_<desde>_<hasta>.txt`
+(un archivo por corrida). Conviene correr
 un rango por proceso (2023, 2024, 2025-26) y al final consolidar todo con
 `--solo-consolidar`.
 

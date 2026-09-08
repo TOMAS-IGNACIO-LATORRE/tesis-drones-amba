@@ -39,6 +39,7 @@ import pandas as pd
 from shapely.geometry import Point, box
 
 SRC = "data/raw/espacio_aereo/aerodromos_amba_ourairports.csv"
+OURAIRPORTS = "https://davidmegginson.github.io/ourairports-data/airports.csv"
 OUT = "data/processed"
 NM = 1852.0                       # metros por milla náutica
 CRS_METRICO = "EPSG:5347"         # POSGAR 2007 faja 5 (Buenos Aires)
@@ -50,7 +51,29 @@ BBOX_AMBA = (-59.30, -35.20, -57.90, -34.15)
 CONTROLADOS = {"SABE", "SAEZ", "SADP", "SADF", "SADO", "SADM", "SADJ"}
 
 
+def asegurar_aerodromos():
+    """Si no está el recorte del AMBA, baja airports.csv de OurAirports
+    (dominio público, ~13 MB) y lo filtra a Argentina dentro del bbox."""
+    if os.path.exists(SRC):
+        return
+    import requests
+    os.makedirs(os.path.dirname(SRC), exist_ok=True)
+    crudo = os.path.join(os.path.dirname(SRC), "ourairports_airports.csv")
+    if not os.path.exists(crudo):
+        print(f"Bajando {OURAIRPORTS} ...")
+        r = requests.get(OURAIRPORTS, timeout=120)
+        r.raise_for_status()
+        with open(crudo, "wb") as f:
+            f.write(r.content)
+    a = pd.read_csv(crudo)
+    lon0, lat0, lon1, lat1 = BBOX_AMBA
+    a = a[(a.iso_country == "AR") & a.latitude_deg.between(lat0, lat1) & a.longitude_deg.between(lon0, lon1)]
+    a.to_csv(SRC, index=False)
+    print(f"Aeródromos de OurAirports en el bbox del AMBA: {len(a)} -> {SRC}")
+
+
 def main():
+    asegurar_aerodromos()
     a = pd.read_csv(SRC)
     a = a[~a["type"].isin(["closed", "balloonport"])].copy()
     a["ident"] = a["ident"].astype(str)

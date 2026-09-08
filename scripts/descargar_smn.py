@@ -11,9 +11,10 @@ estaciones del AMBA en una sola tabla.
 Salida:
   data/raw/smn/datohorario/datohorario<YYYYMMDD>.txt   crudo, latin-1, todas
                                                        las estaciones del país
-  data/raw/smn/faltantes.txt                           fechas que el SMN no
+  data/raw/smn/faltantes_<desde>_<hasta>.txt           fechas que el SMN no
                                                        tiene ("El archivo no
-                                                       existe") o que fallaron
+                                                       existe") o que fallaron,
+                                                       una lista por corrida
   data/processed/smn_horario_amba.parquet / .csv       estaciones del AMBA,
                                                        una fila por estación
                                                        y hora
@@ -175,9 +176,10 @@ def main():
             if n % 50 == 0 or d == hasta:
                 print(f"  {n}/{total}  {estados}", flush=True)
             d += dt.timedelta(days=1)
-        with open(FALTANTES, "w") as f:
+        ruta_faltantes = FALTANTES.replace(".txt", f"_{desde:%Y%m%d}_{hasta:%Y%m%d}.txt")
+        with open(ruta_faltantes, "w") as f:
             f.write("\n".join(faltantes) + ("\n" if faltantes else ""))
-        print(f"Faltantes: {len(faltantes)} (lista en {FALTANTES})")
+        print(f"Faltantes: {len(faltantes)} (lista en {ruta_faltantes})")
 
     consolidar(desde.strftime("%Y%m%d"), hasta.strftime("%Y%m%d"))
 
