@@ -98,7 +98,7 @@ python scripts/build_amba.py
 | Urbanizaciones cerradas 2026 — extracción propia de Wikimapia | CC BY-SA (Wikimapia) | Delta de Tigre listo; AMBA pendiente de cuota de la API | `extraer_wikimapia.py` | `data/processed/urbanizaciones_<region>_<fecha>.*` |
 | Censo 2022 por radio censal — INDEC (1ª entrega definitiva, vía `censoargentino`) | Uso público con cita | En mano: 17.693 radios del AMBA | `descargar_censo.py` | `data/raw/censo_2022/*.parquet`, `data/processed/censo_2022_radios_amba.csv` |
 | Cartografía de radios 2022 corregida — Rodríguez, CEUR-CONICET (copia redistribuida en HF `pedroorden/censoargentino`) | CC BY-SA 2.5 | En mano: 66.502 radios, recorte AMBA con censo pegado | `build_radios_amba.py` | `data/raw/radios_2022/radios-2022.parquet`, `data/processed/radios_amba_2022.*` |
-| Viento horario — SMN datos abiertos (`datohorario`, 2023 en adelante, 10 estaciones del AMBA) | Ver condiciones SMN (a confirmar) | En descarga | `descargar_smn.py` | `data/raw/smn/datohorario/`, `data/processed/smn_horario_amba.*` |
+| Viento horario — SMN datos abiertos (`datohorario`, 2023-01-01 a 2026-09-07, 10 estaciones del AMBA) | Ver condiciones SMN (a confirmar) | En mano: 1.338 de 1.346 días, 284.859 filas; los 8 días que faltan no existen en el servidor | `descargar_smn.py` | `data/raw/smn/datohorario/`, `data/processed/smn_horario_amba.*` |
 | Viento y precipitación horaria — NOAA ISD-Lite (Aeroparque, Ezeiza, El Palomar, San Fernando, Observatorio) | Dominio público | En mano 2020-2025 | `descargar_isd.py` | `data/raw/noaa_isd_lite/`, `data/processed/isd_horario_amba.*` |
 | Red vial y edificios — OpenStreetMap (Geofabrik, extracto 2026-09-07) | ODbL | En mano: recorte AMBA, 264.794 vías, 223.841 edificios | `osmium` (ver abajo) | `data/raw/osm/amba*.osm.pbf` |
 | Aeródromos y helipuertos — OurAirports + distancias RAAC Parte 100 (ANAC) | Dominio público / uso público | En mano: 81 sitios, 137 zonas de restricción. Faltan polígonos CTR/TMA (AIP) | `build_espacio_aereo.py` | `data/raw/espacio_aereo/`, `data/processed/espacio_aereo_amba.geojson`, `docs/regulacion/raac_parte_100.pdf` |
@@ -135,7 +135,26 @@ Usar esa columna, no `cod_radio`, para cruzar con el censo.
 las dos cosas para las mismas estaciones aeronáuticas, en UTC y con el viento
 en m/s. Umbral de referencia (Speedbird): 55 km/h. El servidor del SMN
 responde lento y con errores 522 intermitentes; el script reintenta y marca
-las fechas que no consiguió en `data/raw/smn/faltantes.txt`.
+las fechas que no consiguió en `data/raw/smn/faltantes.txt`. Conviene correr
+un rango por proceso (2023, 2024, 2025-26) y al final consolidar todo con
+`--solo-consolidar`.
+
+Cobertura del SMN 2023-2026: Aeroparque, Observatorio, Ezeiza, El Palomar,
+San Fernando, Morón y La Plata tienen el 99 % de las horas; Campo de Mayo,
+Mariano Moreno y Merlo solo reportan de día (54 a 75 %). El viento medio
+horario supera los 55 km/h en menos del 0,05 % de las horas en todas las
+estaciones, y el percentil 95 está entre 17 y 28 km/h: la ventana operable la
+van a definir la precipitación y las ráfagas, no el viento medio. En ISD-Lite
+las estaciones argentinas no reportan precipitación horaria, solo el
+acumulado de 6 h de los reportes sinópticos (00, 06, 12 y 18 UTC); entre el
+10 % y el 32 % de esos reportes traen lluvia según la estación.
+
+Control cruzado: el viento del SMN (hora local) y el de ISD-Lite (UTC menos
+3) coinciden hora a hora en las cinco estaciones comunes, con correlación
+0,995 a 0,998 y diferencia media cero sobre más de 20.000 horas por estación.
+Son la misma observación por dos canales, así que se puede usar ISD-Lite para
+la precipitación y el SMN para las estaciones que NOAA no distribuye (Morón,
+La Plata, Campo de Mayo, Mariano Moreno, Merlo).
 
 **OpenStreetMap.** Con `osmium` instalado (`brew install osmium-tool`):
 
