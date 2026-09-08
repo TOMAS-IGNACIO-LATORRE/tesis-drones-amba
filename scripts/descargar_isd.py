@@ -77,10 +77,12 @@ def descargar(usaf_wban, anio, reintentos=3):
 def parsear(ruta, usaf_wban):
     with gzip.open(ruta, "rt") as f:
         df = pd.read_fwf(io.StringIO(f.read()), colspecs=COLSPECS, names=NOMBRES, header=None)
-    df = df.replace(-9999, pd.NA)
     df["fecha_hora_utc"] = pd.to_datetime(dict(year=df.anio, month=df.mes, day=df.dia, hour=df.hora))
+    for c in ("temp", "rocio", "pnm", "dd", "ff", "nubes", "pp_1h", "pp_6h"):
+        df[c] = pd.to_numeric(df[c], errors="coerce").astype(float)
+        df.loc[df[c] == -9999, c] = float("nan")
     for c in ("temp", "rocio", "pnm", "ff", "pp_1h", "pp_6h"):
-        df[c] = pd.to_numeric(df[c], errors="coerce") / 10.0
+        df[c] = df[c] / 10.0
     df["ff_kmh"] = (df["ff"] * 3.6).round(1)
     nombre, oaci, lat, lon = ESTACIONES[usaf_wban]
     df["estacion_id"] = usaf_wban
@@ -113,11 +115,14 @@ def main():
     res = (df.groupby(["estacion", "oaci"])
              .agg(desde=("fecha_hora_utc", "min"), hasta=("fecha_hora_utc", "max"), horas=("fecha_hora_utc", "size"),
                   ff_nulo_pct=("ff", lambda s: round(100 * s.isna().mean(), 1)),
-                  pp1h_nulo_pct=("pp_1h", lambda s: round(100 * s.isna().mean(), 1)),
-                  pp6h_nulo_pct=("pp_6h", lambda s: round(100 * s.isna().mean(), 1)),
-                  ff_media_kmh=("ff_kmh", "mean"),
+                  ff_media_kmh=("ff_kmh", "mean"), ff_max_kmh=("ff_kmh", "max"),
+                  pct_horas_ff_mayor_40=("ff_kmh", lambda s: round(100 * (s > 40).mean(), 2)),
                   pct_horas_ff_mayor_55=("ff_kmh", lambda s: round(100 * (s > 55).mean(), 2)),
-                  pct_horas_con_lluvia_1h=("pp_1h", lambda s: round(100 * (s > 0).mean(), 2))))
+                  # Las estaciones argentinas no reportan pp de 1 h: solo los
+                  # acumulados de 6 h de los reportes sinópticos (00/06/12/18 UTC)
+                  reportes_pp_6h=("pp_6h", lambda s: int(s.notna().sum())),
+                  pct_reportes_6h_con_lluvia=("pp_6h", lambda s: round(100 * (s.dropna() > 0).mean(), 1)),
+                  pp_6h_max_mm=("pp_6h", "max")))
     print(res.round(1).to_string())
 
 
