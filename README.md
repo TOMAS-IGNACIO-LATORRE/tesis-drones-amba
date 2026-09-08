@@ -92,16 +92,72 @@ python scripts/build_amba.py
 
 ## Fuentes de datos
 
-| Fuente | Licencia | Estado |
-|---|---|---|
-| Urbanizaciones cerradas 2022 — Poblaciones (De Grande), vía Wikimapia | CC BY 4.0 | En mano |
-| Censo 2022 por radio censal — INDEC (REDATAM) | Uso público con cita | Pendiente |
-| Cartografía de radios corregida — Rodríguez, CEUR-CONICET | CC BY-SA 2.5 | Pendiente |
-| Series horarias de viento y precipitación — SMN | A confirmar | Pendiente |
-| Red vial y edificios — OpenStreetMap | ODbL | Pendiente |
-| Espacio aéreo y zonas restringidas — ANAC / EANA | Uso público | Pendiente |
-| Penetración de e-commerce — CACE | Uso público con cita | Pendiente |
-| Órdenes históricas de un operador | Privada, sujeta a NDA | En gestión |
+| Fuente | Licencia | Estado | Script | Dónde queda |
+|---|---|---|---|---|
+| Urbanizaciones cerradas 2022 — Poblaciones (De Grande), vía Wikimapia | CC BY 4.0 | En mano (crudo + derivados) | `build_amba.py` | `data/raw/Urbanizaciones_cerradas__2022.*`, `data/processed/urbanizaciones_amba_2022.*` |
+| Urbanizaciones cerradas 2026 — extracción propia de Wikimapia | CC BY-SA (Wikimapia) | Delta de Tigre listo; AMBA pendiente de cuota de la API | `extraer_wikimapia.py` | `data/processed/urbanizaciones_<region>_<fecha>.*` |
+| Censo 2022 por radio censal — INDEC (1ª entrega definitiva, vía `censoargentino`) | Uso público con cita | En mano: 17.693 radios del AMBA | `descargar_censo.py` | `data/raw/censo_2022/*.parquet`, `data/processed/censo_2022_radios_amba.csv` |
+| Cartografía de radios 2022 corregida — Rodríguez, CEUR-CONICET (copia redistribuida en HF `pedroorden/censoargentino`) | CC BY-SA 2.5 | En mano: 66.502 radios, recorte AMBA con censo pegado | `build_radios_amba.py` | `data/raw/radios_2022/radios-2022.parquet`, `data/processed/radios_amba_2022.*` |
+| Viento horario — SMN datos abiertos (`datohorario`, 2023 en adelante, 10 estaciones del AMBA) | Ver condiciones SMN (a confirmar) | En descarga | `descargar_smn.py` | `data/raw/smn/datohorario/`, `data/processed/smn_horario_amba.*` |
+| Viento y precipitación horaria — NOAA ISD-Lite (Aeroparque, Ezeiza, El Palomar, San Fernando, Observatorio) | Dominio público | En mano 2020-2025 | `descargar_isd.py` | `data/raw/noaa_isd_lite/`, `data/processed/isd_horario_amba.*` |
+| Red vial y edificios — OpenStreetMap (Geofabrik, extracto 2026-09-07) | ODbL | En mano: recorte AMBA, 264.794 vías, 223.841 edificios | `osmium` (ver abajo) | `data/raw/osm/amba*.osm.pbf` |
+| Aeródromos y helipuertos — OurAirports + distancias RAAC Parte 100 (ANAC) | Dominio público / uso público | En mano: 81 sitios, 137 zonas de restricción. Faltan polígonos CTR/TMA (AIP) | `build_espacio_aereo.py` | `data/raw/espacio_aereo/`, `data/processed/espacio_aereo_amba.geojson`, `docs/regulacion/raac_parte_100.pdf` |
+| Penetración y ticket de e-commerce — CACE, Estudio Anual 2025 | Uso público con cita | En mano: cifras públicas del comunicado (el informe completo es para socios) | — | `data/raw/cace/cace_estudio_anual_2025_cifras.csv` |
+| Órdenes históricas de un operador | Privada, sujeta a NDA | En gestión | — | `data/operador/` (nunca versionado) |
+
+Todo lo que está en `data/` se regenera corriendo los scripts en este orden:
+`build_amba.py` → `descargar_censo.py` → `build_radios_amba.py` →
+`build_espacio_aereo.py` → `descargar_isd.py` → `descargar_smn.py`. Los de
+descarga son reanudables: no vuelven a pedir lo que ya está en disco.
+
+### Notas por fuente
+
+**Censo 2022.** `descargar_censo.py` baja 10 variables (población, personas
+por hogar, tipo y ocupación de la vivienda, NBI, materiales, internet, área
+urbano/rural, edad) para los 40 partidos del AMBA y las 15 comunas, y arma
+una fila por radio. Control: la población por partido coincide exactamente
+con el campo `POB_TOT_P` de la cartografía de CONICET. Ojo con la clave de
+cruce: `id_geo` son 9 caracteres con cero adelante (`068050101`); el
+`cod_depto` del dataset de urbanizaciones trae el prefijo de provincia
+(`6119` = Brandsen) y el catálogo del censo tiene los nombres con la
+codificación rota (`Ca˝uelas`), por eso los scripts comparan códigos y no
+nombres.
+
+**Radios 2022.** El `REDCODE` que trae Poblaciones no es un radio 2022: solo
+el 22,7 % coincide con el radio que contiene a cada urbanización según la
+cartografía corregida. `build_radios_amba.py` reasigna el radio por posición
+y deja la clave correcta en
+`data/processed/urbanizaciones_amba_2022_radio2022.csv` (`id_geo_2022`).
+Usar esa columna, no `cod_radio`, para cruzar con el censo.
+
+**Meteorología.** Los archivos horarios abiertos del SMN traen viento
+(dirección y velocidad en km/h) pero no precipitación; ISD-Lite de NOAA trae
+las dos cosas para las mismas estaciones aeronáuticas, en UTC y con el viento
+en m/s. Umbral de referencia (Speedbird): 55 km/h. El servidor del SMN
+responde lento y con errores 522 intermitentes; el script reintenta y marca
+las fechas que no consiguió en `data/raw/smn/faltantes.txt`.
+
+**OpenStreetMap.** Con `osmium` instalado (`brew install osmium-tool`):
+
+```bash
+curl -L -o data/raw/osm/argentina-latest.osm.pbf https://download.geofabrik.de/south-america/argentina-latest.osm.pbf
+osmium extract --bbox -59.30,-35.20,-57.90,-34.15 --strategy=complete_ways -o data/raw/osm/amba.osm.pbf data/raw/osm/argentina-latest.osm.pbf
+osmium tags-filter -o data/raw/osm/amba_vial.osm.pbf data/raw/osm/amba.osm.pbf w/highway
+osmium tags-filter -o data/raw/osm/amba_edificios.osm.pbf data/raw/osm/amba.osm.pbf w/building
+```
+
+El recorte vial (16 MB) es la entrada para OSRM. No convertir el recorte
+completo a GeoJSON: son cientos de miles de edificios.
+
+**Espacio aéreo.** No existe una capa oficial. `build_espacio_aereo.py`
+aplica las distancias de la RAAC 100 (3 NM alrededor de aeródromos con tope
+de 150 ft; 1 NM prohibido y 1-2 NM con tope de 150 ft alrededor de
+helipuertos) sobre los puntos de OurAirports. Con eso, el 24 % del recuadro
+del AMBA queda bajo alguna restricción. Lo que falta y hay que decidir cómo
+obtener: los polígonos CTR/TMA y los corredores VFR del AIP Argentina (EANA),
+sea digitalizando las cartas o con OpenAIP (requiere cuenta, CC BY-NC-SA).
+El PDF de la RAAC 100 en `docs/regulacion/` es la primera edición (abril
+2025); verificar contra la Resolución 550/2025 y las 311-313/2026.
 
 **Los datos de operador no se versionan en este repositorio bajo ninguna
 circunstancia.** Contienen direcciones de clientes. `data/operador/` está en
