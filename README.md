@@ -99,15 +99,16 @@ python scripts/build_amba.py
 | Censo 2022 por radio censal — INDEC (1ª entrega definitiva, vía `censoargentino`) | Uso público con cita | En mano: 17.693 radios del AMBA | `descargar_censo.py` | `data/raw/censo_2022/*.parquet`, `data/processed/censo_2022_radios_amba.csv` |
 | Cartografía de radios 2022 corregida — Rodríguez, CEUR-CONICET (copia redistribuida en HF `pedroorden/censoargentino`) | CC BY-SA 2.5 | En mano: 66.502 radios, recorte AMBA con censo pegado | `build_radios_amba.py` | `data/raw/radios_2022/radios-2022.parquet`, `data/processed/radios_amba_2022.*` |
 | Viento horario — SMN datos abiertos (`datohorario`, 2023-01-01 a 2026-09-07, 10 estaciones del AMBA) | Ver condiciones SMN (a confirmar) | En mano: 1.338 de 1.346 días, 284.859 filas; los 8 días que faltan no existen en el servidor | `descargar_smn.py` | `data/raw/smn/datohorario/`, `data/processed/smn_horario_amba.*` |
-| Viento y precipitación horaria — NOAA ISD-Lite (Aeroparque, Ezeiza, El Palomar, San Fernando, Observatorio) | Dominio público | En mano 2020-2025 | `descargar_isd.py` | `data/raw/noaa_isd_lite/`, `data/processed/isd_horario_amba.*` |
+| Viento y precipitación horaria — NOAA ISD-Lite (Aeroparque, Ezeiza, El Palomar, San Fernando, Observatorio) | Dominio público | En mano: 2020-01 a 2025-08 (El Palomar desde 2022-01, ver nota) | `descargar_isd.py` | `data/raw/noaa_isd_lite/`, `data/processed/isd_horario_amba.*` |
 | Red vial y edificios — OpenStreetMap (Geofabrik, extracto 2026-09-07) | ODbL | En mano: recorte AMBA, 264.794 vías, 223.841 edificios | `osmium` (ver abajo) | `data/raw/osm/amba*.osm.pbf` |
 | Aeródromos y helipuertos — OurAirports + distancias RAAC Parte 100 (ANAC) | Dominio público / uso público | En mano: 81 sitios, 137 zonas de restricción. Faltan polígonos CTR/TMA (AIP) | `build_espacio_aereo.py` | `data/raw/espacio_aereo/`, `data/processed/espacio_aereo_amba.geojson`, `docs/regulacion/raac_parte_100.pdf` |
-| Penetración y ticket de e-commerce — CACE, Estudio Anual 2025 | Uso público con cita | En mano: cifras públicas del comunicado (el informe completo es para socios) | — (curado a mano, sí se versiona) | `data/cace/cace_estudio_anual_2025_cifras.csv` |
+| Penetración, ticket y logística de e-commerce — CACE, Estudios Anuales 2015-2025 | Uso público con cita | En mano: serie 2015-2025 transcripta de los resúmenes públicos (PDF) de cada estudio; el informe completo es para socios | `build_cace_serie.py` (las cifras están en el script; sí se versiona) | `data/raw/cace/*.pdf`, `data/cace/cace_estudio_anual_serie_2015_2025*.csv` |
 | Órdenes históricas de un operador | Privada, sujeta a NDA | En gestión | — | `data/operador/` (nunca versionado) |
 
 Todo lo que está en `data/` se regenera corriendo los scripts en este orden:
 `build_amba.py` → `descargar_censo.py` → `build_radios_amba.py` →
-`build_espacio_aereo.py` → `descargar_isd.py` → `descargar_smn.py`. Los de
+`build_espacio_aereo.py` → `descargar_isd.py` → `descargar_smn.py` →
+`build_cace_serie.py`. Los de
 descarga son reanudables: no vuelven a pedir lo que ya está en disco.
 
 ### Notas por fuente
@@ -150,6 +151,13 @@ las estaciones argentinas no reportan precipitación horaria, solo el
 acumulado de 6 h de los reportes sinópticos (00, 06, 12 y 18 UTC); entre el
 10 % y el 32 % de esos reportes traen lluvia según la estación.
 
+Cobertura de ISD-Lite (verificado 2026-09-08): las series llegan hasta el
+2025-08-24 y NOAA todavía no publica 2026 para estas estaciones. El Palomar
+arranca el 2022-01-06: los archivos de 2020 y 2021 existen en el servidor pero
+traen 4 y 7 horas en todo el año, así que `descargar_isd.py` los descarta como
+`vacio`. San Miguel (875690) no tiene archivos en ISD-Lite, salvo uno casi
+vacío de 2025.
+
 Control cruzado: el viento del SMN (hora local) y el de ISD-Lite (UTC menos
 3) coinciden hora a hora en las cinco estaciones comunes, con correlación
 0,995 a 0,998 y diferencia media cero sobre más de 20.000 horas por estación.
@@ -183,6 +191,25 @@ El PDF de la RAAC 100 en `docs/regulacion/` es la primera edición (abril
 circunstancia.** Contienen direcciones de clientes. `data/operador/` está en
 `.gitignore`; si llegan a incorporarse, va únicamente la versión geocodificada
 y agregada, nunca las direcciones en texto.
+
+## Copia en Google Drive
+
+Los datos viven en el repo solo como código; la copia para el seminario está
+en la carpeta "Checkpoint 1" de Drive, en `Bases de datos/0X_*`, con la misma
+convención en todas: `crudo/` para lo bajado sin tocar y `derivado/` para lo
+que generan los scripts (junto con el script que los genera).
+`scripts/subir_drive.sh` sube todo con `rclone` (`brew install rclone`),
+comparando por checksum para no volver a subir lo que ya está igual. La
+primera vez hay que autorizar el remote con la cuenta personal:
+
+```bash
+rclone config create tesis drive scope=drive root_folder_id=1alNAM8hbxGALa6d-f_fhombrEgwP8j46
+bash scripts/subir_drive.sh --dry-run   # qué subiría
+bash scripts/subir_drive.sh             # sube
+```
+
+No sube `argentina-latest.osm.pbf` (se regenera con `curl`) ni `data/operador/`.
+El crudo del SMN va comprimido en un zip porque son 1.338 archivos diarios.
 
 ## Notas metodológicas
 

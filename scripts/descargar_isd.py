@@ -70,6 +70,10 @@ def descargar(usaf_wban, anio, reintentos=3):
             with open(ruta, "wb") as f:
                 f.write(r.content)
             return ruta, "ok"
+        if r.status_code == 200:
+            # NOAA publica archivos casi vacíos (El Palomar 2020 y 2021 traen
+            # 4 y 7 horas en todo el año); no sirven y no es un error de red.
+            return None, "vacio"
         time.sleep(espera); espera *= 2
     return None, "error"
 

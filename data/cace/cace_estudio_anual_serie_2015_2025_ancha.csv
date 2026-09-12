@@ -1,0 +1,12 @@
+periodo,facturacion_total,crecimiento_facturacion_interanual,inflacion_interanual_indec,ordenes_de_compra,crecimiento_ordenes_interanual,unidades_vendidas,ticket_promedio,compradores_totales,compradores_nuevos,frecuencia_compra_mensual_o_mas,participacion_facturacion_amba,participacion_facturacion_resto_pba,participacion_facturacion_litoral,participacion_facturacion_centro,participacion_facturacion_sur,participacion_facturacion_noa,participacion_facturacion_cuyo,envio_a_domicilio_ventas,retiro_en_punto_de_venta_ventas,compradores_eligen_envio_domicilio,entregas_hasta_24h,entregas_amba_en_el_dia,entregas_amba_en_24h,entregas_interior_en_el_dia,entregas_interior_en_24h,pago_tarjeta_credito
+2015,68240,,,,,,1795,,,,,,,,,,,,,,,,,,,
+2016,102700,51,,47,,75,2185,,,,44,,,,,,,47,45,66,21,,,,,
+2017,156300,52,,60,28,96,2600,,,,39,,,,,,,44,50,,14,,,,,
+2018,229760,47,,79,32,120,2900,,,,37,,,,,,,39,54,62,19,,,,,
+2019,403278,76,53.8,89,12,146,4500,18773246,828000,,37,,,,,,,39,50,65,22,9,17,8,8,
+2020,905143,124,36.1,164,84,251,5519,20058206,1284960,60,38,,,,,,,56,35,80,24,18,12,10,6,
+2021,1520640,68,50.9,196,20,381,7757,20742665,684459,,39,,,,,,,55,37,76,28,23,14,9,8,
+2022,2846154,87,94.8,211,8,422,13488,21828205,1085540,,38,,,,,,,53,35,73,27,20,14,10,10,
+2023,7829835,175,,234,11,489,33457,23247989,1419784,60,41,17,,8,,,,60,30,72,30,22,16,9,9,
+2024,22025462,181,117.7,246,5,504,92341,23784620,536632,60,42,17,13,8,8,7,5,61,27,,33,22,21,11,10,74
+2025,34033238,55,31.5,253,3,645,134519,25123572,1338952,60,52,5,12,9,9,7,5,58,29,,37,28,17,13,14,67
